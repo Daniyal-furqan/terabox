@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="ur">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TeraDown — Fast Terabox Downloader</title>
+<meta name="description" content="Terabox links se fast aur free mein files download karein. No signup required.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0e1a;
+    --bg2: #111827;
+    --bg3: #1a2236;
+    --accent: #3b82f6;
+    --accent2: #06b6d4;
+    --text: #f1f5f9;
+    --text2: #94a3b8;
+    --text3: #64748b;
+    --border: rgba(255,255,255,0.08);
+    --border2: rgba(255,255,255,0.14);
+    --green: #10b981;
+    --red: #ef4444;
+    --radius: 14px;
+    --radius-sm: 9px;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Background blobs */
+  .bg-blobs {
+    position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden;
+  }
+  .blob {
+    position: absolute; border-radius: 50%; filter: blur(80px); opacity: 0.18;
+  }
+  .blob-1 { width: 600px; height: 600px; background: #3b82f6; top: -200px; left: -200px; }
+  .blob-2 { width: 500px; height: 500px; background: #06b6d4; bottom: -150px; right: -150px; }
+  .blob-3 { width: 300px; height: 300px; background: #8b5cf6; top: 40%; left: 40%; }
+
+  /* NAV */
+  nav {
+    position: relative; z-index: 10;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 1.2rem 2rem;
+    border-bottom: 1px solid var(--border);
+    backdrop-filter: blur(12px);
+    background: rgba(10,14,26,0.7);
+  }
+  .nav-logo {
+    display: flex; align-items: center; gap: 10px;
+    font-size: 20px; font-weight: 800; color: var(--text);
+    text-decoration: none; letter-spacing: -0.5px;
+  }
+  .nav-logo .logo-box {
+    width: 34px; height: 34px; border-radius: 9px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    display: flex; align-items: center; justify-content: center;
+  }
+  .nav-logo .logo-box svg { width: 18px; height: 18px; fill: white; }
+  .nav-logo span { color: var(--accent2); }
+  .nav-tag {
+    font-size: 12px; font-weight: 600; color: var(--accent2);
+    background: rgba(6,182,212,0.12); border: 1px solid rgba(6,182,212,0.25);
+    padding: 4px 12px; border-radius: 20px;
+  }
+
+  /* HERO */
+  .hero {
+    position: relative; z-index: 2;
+    text-align: center;
+    padding: 5rem 1.5rem 3rem;
+  }
+  .hero-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 12px; font-weight: 600; color: var(--accent);
+    background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.25);
+    padding: 5px 14px; border-radius: 20px; margin-bottom: 1.5rem;
+  }
+  .hero-badge::before {
+    content: ''; width: 7px; height: 7px; border-radius: 50%; background: var(--green);
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+  h1 {
+    font-size: clamp(2rem, 5vw, 3.4rem);
+    font-weight: 800;
+    line-height: 1.15;
+    letter-spacing: -1px;
+    margin-bottom: 1rem;
+  }
+  h1 .gradient {
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .hero-sub {
+    font-size: 17px; color: var(--text2); max-width: 520px;
+    margin: 0 auto 2.5rem; line-height: 1.7;
+  }
+
+  /* DOWNLOADER CARD */
+  .downloader-card {
+    position: relative; z-index: 2;
+    max-width: 680px; margin: 0 auto;
+    background: var(--bg2);
+    border: 1px solid var(--border2);
+    border-radius: 20px;
+    padding: 2rem;
+    box-shadow: 0 32px 80px rgba(0,0,0,0.4);
+  }
+
+  .input-group {
+    display: flex; gap: 10px; margin-bottom: 1rem;
+  }
+  .url-input {
+    flex: 1;
+    background: var(--bg3);
+    border: 1.5px solid var(--border2);
+    border-radius: var(--radius-sm);
+    padding: 13px 16px;
+    font-size: 14px;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .url-input::placeholder { color: var(--text3); }
+  .url-input:focus { border-color: var(--accent); }
+  .dl-btn {
+    padding: 13px 22px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: white;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-size: 14px;
+    font-weight: 700;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: opacity 0.2s, transform 0.1s;
+  }
+  .dl-btn:hover { opacity: 0.9; }
+  .dl-btn:active { transform: scale(0.97); }
+  .dl-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .hint { font-size: 12px; color: var(--text3); margin-bottom: 0; }
+  .hint span { color: var(--text2); }
+
+  /* PROGRESS */
+  .progress-wrap {
+    height: 3px; background: var(--bg3); border-radius: 3px;
+    margin: 1rem 0; overflow: hidden; display: none;
+  }
+  .progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    border-radius: 3px; width: 0%;
+    transition: width 0.3s ease;
+  }
+
+  /* ERROR */
+  .error-box {
+    display: none;
+    background: rgba(239,68,68,0.1);
+    border: 1px solid rgba(239,68,68,0.25);
+    border-radius: var(--radius-sm);
+    padding: 10px 14px;
+    font-size: 13px;
+    color: #fca5a5;
+    margin-top: 0.75rem;
+  }
+
+  /* RESULT */
+  .result-wrap {
+    display: none; margin-top: 1.5rem;
+    border-top: 1px solid var(--border);
+    padding-top: 1.5rem;
+  }
+  .file-info {
+    display: flex; align-items: center; gap: 14px; margin-bottom: 1.25rem;
+  }
+  .file-thumb {
+    width: 52px; height: 52px; border-radius: 10px;
+    background: var(--bg3); border: 1px solid var(--border2);
+    display: flex; align-items: center; justify-content: center;
+    overflow: hidden; flex-shrink: 0;
+  }
+  .file-thumb img { width: 100%; height: 100%; object-fit: cover; }
+  .file-thumb svg { width: 26px; height: 26px; opacity: 0.5; }
+  .file-details .name {
+    font-size: 14px; font-weight: 600; color: var(--text);
+    word-break: break-all; line-height: 1.4;
+  }
+  .file-details .meta {
+    font-size: 12px; color: var(--text3); margin-top: 3px;
+    display: flex; gap: 10px; flex-wrap: wrap;
+  }
+  .meta-chip {
+    background: var(--bg3); border: 1px solid var(--border);
+    border-radius: 5px; padding: 2px 8px; font-size: 11px; color: var(--text2);
+  }
+
+  .link-list { display: flex; flex-direction: column; gap: 8px; }
+  .link-btn {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 11px 16px;
+    background: var(--bg3);
+    border: 1px solid var(--border2);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    font-size: 13px; font-weight: 600;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    text-decoration: none; cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+  }
+  .link-btn:hover { border-color: var(--accent); background: rgba(59,130,246,0.08); }
+  .link-btn .right { font-size: 12px; font-weight: 400; color: var(--text3); }
+  .link-btn .dl-icon {
+    width: 28px; height: 28px; border-radius: 6px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .link-btn .dl-icon svg { width: 14px; height: 14px; fill: white; }
+  .link-btn .btn-left { display: flex; align-items: center; gap: 10px; }
+
+  /* ALTERNATIVES */
+  .alt-label {
+    font-size: 11px; font-weight: 600; color: var(--text3);
+    text-transform: uppercase; letter-spacing: 0.5px;
+    margin-bottom: 8px;
+  }
+  .alt-btn {
+    background: transparent;
+    border: 1px dashed var(--border2);
+    color: var(--text2);
+  }
+  .alt-btn:hover { border-color: var(--accent2); color: var(--text); }
+
+  /* FEATURES */
+  .features {
+    position: relative; z-index: 2;
+    max-width: 680px; margin: 3rem auto 0;
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
+    padding: 0 1.5rem;
+  }
+  @media(max-width: 520px) { .features { grid-template-columns: 1fr; } }
+  .feat-card {
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 1.2rem;
+  }
+  .feat-icon {
+    width: 36px; height: 36px; border-radius: 9px;
+    background: var(--bg3); display: flex; align-items: center;
+    justify-content: center; margin-bottom: 10px;
+  }
+  .feat-icon svg { width: 18px; height: 18px; }
+  .feat-title { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+  .feat-desc { font-size: 12px; color: var(--text3); line-height: 1.5; }
+
+  /* HOW TO USE */
+  .how-section {
+    position: relative; z-index: 2;
+    max-width: 680px; margin: 2.5rem auto 0;
+    padding: 0 1.5rem;
+  }
+  .section-title {
+    font-size: 18px; font-weight: 700; margin-bottom: 1rem; text-align: center;
+  }
+  .steps-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;
+  }
+  @media(max-width: 520px) { .steps-grid { grid-template-columns: repeat(2,1fr); } }
+  .step-card {
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 1rem; text-align: center;
+  }
+  .step-num {
+    width: 30px; height: 30px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: white; font-size: 13px; font-weight: 800;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 8px;
+  }
+  .step-text { font-size: 12px; color: var(--text2); line-height: 1.4; }
+
+  /* FOOTER */
+  footer {
+    position: relative; z-index: 2;
+    text-align: center; padding: 3rem 1.5rem 2rem;
+    color: var(--text3); font-size: 12px; line-height: 1.8;
+    border-top: 1px solid var(--border); margin-top: 3rem;
+  }
+
+  /* Loading state */
+  .spinner {
+    display: inline-block; width: 16px; height: 16px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: white; border-radius: 50%;
+    animation: spin 0.7s linear infinite; vertical-align: middle; margin-right: 6px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  @media(max-width: 600px) {
+    .downloader-card { padding: 1.25rem; margin: 0 1rem; }
+    .input-group { flex-direction: column; }
+    .dl-btn { width: 100%; }
+    nav { padding: 1rem; }
+    .hero { padding: 3rem 1rem 2rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="bg-blobs">
+  <div class="blob blob-1"></div>
+  <div class="blob blob-2"></div>
+  <div class="blob blob-3"></div>
+</div>
+
+<nav>
+  <a href="#" class="nav-logo">
+    <div class="logo-box">
+      <svg viewBox="0 0 24 24"><path d="M12 16l-6-6h4V4h4v6h4l-6 6zm-8 4h16v-2H4v2z"/></svg>
+    </div>
+    Tera<span>Down</span>
+  </a>
+  <span class="nav-tag">Free &amp; Fast</span>
+</nav>
+
+<section class="hero">
+  <div class="hero-badge">Terabox Downloader — 100% Free</div>
+  <h1>
+    Terabox Files Ko<br>
+    <span class="gradient">Fast Download Karein</span>
+  </h1>
+  <p class="hero-sub">
+    Koi signup nahi, koi app nahi — sirf link paste karein aur<br>
+    apni file seconds mein download karein.
+  </p>
+
+  <div class="downloader-card">
+    <div class="input-group">
+      <input
+        type="url"
+        class="url-input"
+        id="urlInput"
+        placeholder="https://terabox.com/s/... ya koi bhi Terabox link"
+        autocomplete="off"
+      />
+      <button class="dl-btn" id="fetchBtn" onclick="getDownloadLink()">
+        Download ↓
+      </button>
+    </div>
+    <p class="hint">Supported: <span>terabox.com, 1024tera.com, 4funbox.com, terafileshare.com</span></p>
+
+    <div class="progress-wrap" id="progWrap">
+      <div class="progress-bar" id="progBar"></div>
+    </div>
+    <div class="error-box" id="errBox"></div>
+
+    <div class="result-wrap" id="resultWrap">
+      <div class="file-info">
+        <div class="file-thumb" id="filethumb">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/>
+            <polyline points="13 2 13 9 20 9"/>
+          </svg>
+        </div>
+        <div class="file-details">
+          <div class="name" id="fileName">—</div>
+          <div class="meta" id="fileMeta"></div>
+        </div>
+      </div>
+      <div class="link-list" id="linkList"></div>
+    </div>
+  </div>
+</section>
+
+<div class="features">
+  <div class="feat-card">
+    <div class="feat-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2">
+        <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/>
+        <path d="M12 12v6m-3-3 3 3 3-3"/>
+      </svg>
+    </div>
+    <div class="feat-title">All Formats</div>
+    <div class="feat-desc">Videos, photos, zips — sab kuch download hota hai</div>
+  </div>
+  <div class="feat-card">
+    <div class="feat-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#06b6d4" stroke-width="2">
+        <circle cx="12" cy="12" r="10"/>
+        <polyline points="12 6 12 12 16 14"/>
+      </svg>
+    </div>
+    <div class="feat-title">Fast Speed</div>
+    <div class="feat-desc">Direct link milti hai — slow servers bypass hote hain</div>
+  </div>
+  <div class="feat-card">
+    <div class="feat-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+      </svg>
+    </div>
+    <div class="feat-title">Safe & Free</div>
+    <div class="feat-desc">Koi account ya payment nahi chahiye</div>
+  </div>
+</div>
+
+<div class="how-section">
+  <div class="section-title">Kaise Use Karein?</div>
+  <div class="steps-grid">
+    <div class="step-card"><div class="step-num">1</div><div class="step-text">Terabox link copy karein</div></div>
+    <div class="step-card"><div class="step-num">2</div><div class="step-text">Upar box mein paste karein</div></div>
+    <div class="step-card"><div class="step-num">3</div><div class="step-text">"Download" button click karein</div></div>
+    <div class="step-card"><div class="step-num">4</div><div class="step-text">Link par click karke save karein</div></div>
+  </div>
+</div>
+
+<footer>
+  <strong>TeraDown</strong> — Free Terabox Downloader<br>
+  Ye service sirf publicly shared files ke liye hai. Copyright content download karna mana hai.<br>
+  &copy; 2025 TeraDown. Tamam huqooq mahfooz hain.
+</footer>
+
+<script>
+let progInterval = null;
+
+function startProgress() {
+  const wrap = document.getElementById('progWrap');
+  const bar = document.getElementById('progBar');
+  wrap.style.display = 'block';
+  bar.style.width = '0%';
+  let p = 0;
+  progInterval = setInterval(() => {
+    p += Math.random() * 12 + 3;
+    if (p > 88) p = 88;
+    bar.style.width = p + '%';
+  }, 250);
+}
+
+function finishProgress() {
+  clearInterval(progInterval);
+  const bar = document.getElementById('progBar');
+  bar.style.width = '100%';
+  setTimeout(() => {
+    document.getElementById('progWrap').style.display = 'none';
+    bar.style.width = '0%';
+  }, 400);
+}
+
+function showError(msg) {
+  const box = document.getElementById('errBox');
+  box.textContent = msg;
+  box.style.display = 'block';
+}
+
+function hideError() {
+  document.getElementById('errBox').style.display = 'none';
+}
+
+function formatSize(size) {
+  if (!size) return '';
+  if (typeof size === 'number') {
+    if (size > 1073741824) return (size / 1073741824).toFixed(2) + ' GB';
+    if (size > 1048576) return (size / 1048576).toFixed(1) + ' MB';
+    if (size > 1024) return (size / 1024).toFixed(0) + ' KB';
+    return size + ' B';
+  }
+  return size;
+}
+
+async function getDownloadLink() {
+  const url = document.getElementById('urlInput').value.trim();
+  if (!url) { showError('Pehle Terabox link paste karein'); return; }
+
+  hideError();
+  document.getElementById('resultWrap').style.display = 'none';
+  document.getElementById('fetchBtn').disabled = true;
+  document.getElementById('fetchBtn').innerHTML = '<span class="spinner"></span>Processing...';
+  startProgress();
+
+  try {
+    const res = await fetch('api.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url })
+    });
+    const data = await res.json();
+    finishProgress();
+    document.getElementById('fetchBtn').disabled = false;
+    document.getElementById('fetchBtn').innerHTML = 'Download ↓';
+
+    if (data.success) {
+      renderResult(data);
+    } else {
+      showError(data.error || 'Kuch masla hua. Dobara try karein.');
+      if (data.alternatives) renderAlternatives(data.alternatives);
+    }
+  } catch (e) {
+    finishProgress();
+    document.getElementById('fetchBtn').disabled = false;
+    document.getElementById('fetchBtn').innerHTML = 'Download ↓';
+    showError('Server se connection nahi hua. Internet check karein ya dobara try karein.');
+  }
+}
+
+function renderResult(data) {
+  const wrap = document.getElementById('resultWrap');
+  wrap.style.display = 'block';
+
+  document.getElementById('fileName').textContent = data.file_name || 'terabox_file';
+
+  const meta = document.getElementById('fileMeta');
+  meta.innerHTML = '';
+  if (data.file_size) {
+    const chip = document.createElement('span');
+    chip.className = 'meta-chip';
+    chip.textContent = formatSize(data.file_size);
+    meta.appendChild(chip);
+  }
+  if (data.file_type) {
+    const chip = document.createElement('span');
+    chip.className = 'meta-chip';
+    chip.textContent = data.file_type.toUpperCase();
+    meta.appendChild(chip);
+  }
+
+  const thumb = document.getElementById('filethumb');
+  if (data.thumbnail) {
+    thumb.innerHTML = `<img src="${data.thumbnail}" alt="thumbnail" onerror="this.parentNode.innerHTML='<svg viewBox=\\'0 0 24 24\\' fill=\\'none\\' stroke=\\'currentColor\\' stroke-width=\\'1.5\\'><path d=\\'M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z\\'/><polyline points=\\'13 2 13 9 20 9\\'/></svg>'">`;
+  }
+
+  const list = document.getElementById('linkList');
+  list.innerHTML = '';
+
+  if (!data.links || data.links.length === 0) {
+    list.innerHTML = '<p style="font-size:13px;color:var(--text3);text-align:center;padding:1rem 0">Direct link available nahi — alternatives try karein</p>';
+    return;
+  }
+
+  data.links.forEach(link => {
+    const a = document.createElement('a');
+    a.href = link.url;
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
+    a.className = 'link-btn';
+    a.innerHTML = `
+      <div class="btn-left">
+        <div class="dl-icon">
+          <svg viewBox="0 0 24 24"><path d="M12 16l-6-6h4V4h4v6h4l-6 6zm-8 4h16v-2H4v2z"/></svg>
+        </div>
+        ${link.label || 'Download'}
+      </div>
+      <span class="right">${link.quality || 'Click to download'} ↗</span>
+    `;
+    list.appendChild(a);
+  });
+}
+
+function renderAlternatives(alts) {
+  const wrap = document.getElementById('resultWrap');
+  wrap.style.display = 'block';
+  document.getElementById('fileName').textContent = 'Alternative Tools Try Karein';
+  document.getElementById('fileMeta').innerHTML = '';
+
+  const list = document.getElementById('linkList');
+  list.innerHTML = '<div class="alt-label">In websites par same link paste karein</div>';
+
+  alts.forEach(alt => {
+    const a = document.createElement('a');
+    a.href = alt.url;
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
+    a.className = 'link-btn alt-btn';
+    a.innerHTML = `
+      <div class="btn-left">
+        <div class="dl-icon" style="background:rgba(255,255,255,0.08)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+        </div>
+        ${alt.name}
+      </div>
+      <span class="right">Open ↗</span>
+    `;
+    list.appendChild(a);
+  });
+}
+
+document.getElementById('urlInput').addEventListener('keypress', function(e) {
+  if (e.key === 'Enter') getDownloadLink();
+});
+</script>
+</body>
+</html>
