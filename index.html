@@ -480,66 +480,6 @@ function formatSize(size) {
   return size;
 }
 
-function resetBtn() {
-  document.getElementById('fetchBtn').disabled = false;
-  document.getElementById('fetchBtn').innerHTML = 'Download ↓';
-}
-
-async function tryApi1(url) {
-  const res = await fetch(`https://teraboxapp.xyz/api?url=${encodeURIComponent(url)}`);
-  if (!res.ok) throw new Error('api1 failed');
-  const d = await res.json();
-  if (!d || d.error) throw new Error('api1 no data');
-  const links = [];
-  if (d.download_link) links.push({ label: 'HD Download', url: d.download_link, quality: 'High Quality' });
-  if (d.url)           links.push({ label: 'Direct Download', url: d.url, quality: '' });
-  if (d.links && Array.isArray(d.links)) {
-    d.links.forEach((l, i) => {
-      const lu = typeof l === 'string' ? l : (l.url || l.link || '');
-      if (lu) links.push({ label: 'Download ' + (i+1), url: lu, quality: l.quality || '' });
-    });
-  }
-  if (!links.length) throw new Error('api1 no links');
-  return {
-    success: true,
-    file_name: d.file_name || d.filename || d.title || 'terabox_file',
-    file_size: d.size || d.file_size || '',
-    file_type: d.type || '',
-    thumbnail: d.thumbnail || d.thumb || '',
-    links
-  };
-}
-
-async function tryApi2(url) {
-  const res = await fetch(`https://teradownloader.vercel.app/api/terabox?url=${encodeURIComponent(url)}`);
-  if (!res.ok) throw new Error('api2 failed');
-  const d = await res.json();
-  if (!d || (!d.downloadLink && !d.url)) throw new Error('api2 no data');
-  return {
-    success: true,
-    file_name: d.title || d.filename || 'terabox_file',
-    file_size: d.size || '',
-    file_type: '',
-    thumbnail: d.thumbnail || '',
-    links: [{ label: 'Download', url: d.downloadLink || d.url, quality: '' }]
-  };
-}
-
-async function tryApi3(url) {
-  const res = await fetch(`https://tera.instavideosave.com/?url=${encodeURIComponent(url)}`);
-  if (!res.ok) throw new Error('api3 failed');
-  const d = await res.json();
-  if (!d || !d.url) throw new Error('api3 no data');
-  return {
-    success: true,
-    file_name: d.title || d.name || 'terabox_file',
-    file_size: d.size || '',
-    file_type: '',
-    thumbnail: '',
-    links: [{ label: 'Download', url: d.url, quality: '' }]
-  };
-}
-
 async function getDownloadLink() {
   const url = document.getElementById('urlInput').value.trim();
   if (!url) { showError('Pehle Terabox link paste karein'); return; }
@@ -556,28 +496,28 @@ async function getDownloadLink() {
   document.getElementById('fetchBtn').innerHTML = '<span class="spinner"></span>Processing...';
   startProgress();
 
-  const apis = [tryApi1, tryApi2, tryApi3];
-  let result = null;
+  try {
+    const res = await fetch('/api/download', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url })
+    });
+    const data = await res.json();
+    finishProgress();
+    document.getElementById('fetchBtn').disabled = false;
+    document.getElementById('fetchBtn').innerHTML = 'Download ↓';
 
-  for (const api of apis) {
-    try {
-      result = await api(url);
-      if (result && result.success) break;
-    } catch (e) { /* try next */ }
-  }
-
-  finishProgress();
-  resetBtn();
-
-  if (result && result.success) {
-    renderResult(result);
-  } else {
-    showError('Abhi download link nahi mila. Neeche alternatives try karein.');
-    renderAlternatives([
-      { name: 'TBDown.net', url: 'https://tbdown.net/?url=' + encodeURIComponent(url) },
-      { name: 'TeraDownloader.com', url: 'https://teradownloader.com/?url=' + encodeURIComponent(url) },
-      { name: 'TeraBoxApp.xyz', url: 'https://teraboxapp.xyz/?url=' + encodeURIComponent(url) },
-    ]);
+    if (data.success) {
+      renderResult(data);
+    } else {
+      showError(data.error || 'Kuch masla hua. Dobara try karein.');
+      if (data.alternatives) renderAlternatives(data.alternatives);
+    }
+  } catch (e) {
+    finishProgress();
+    document.getElementById('fetchBtn').disabled = false;
+    document.getElementById('fetchBtn').innerHTML = 'Download ↓';
+    showError('Server error. Thodi der baad dobara try karein.');
   }
 }
 
